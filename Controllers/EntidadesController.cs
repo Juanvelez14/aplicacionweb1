@@ -32,6 +32,26 @@ namespace csharpapigenerica.Controllers
         }
 
 
+    /// <summary>
+    /// Endpoint de la raíz de la API.
+    /// Muestra un mensaje de bienvenida con información básica sobre la API.
+    /// </summary>
+    /// <returns>Un mensaje JSON con información de la API.</returns>
+
+        [AllowAnonymous] // Permite acceso sin autenticación
+        [HttpGet("/")]
+        public IActionResult Inicio()
+        {
+            var mensaje = new
+            {
+                Mensaje = "Bienvenido a la API Genérica en C#!",
+                Documentación = "Para más detalles, visita /swagger",
+                FechaServidor = DateTime.UtcNow
+            };
+
+            return Ok(mensaje);
+        }
+
 
         /// <summary>
         /// Obtiene todos los registros de una tabla específica en la base de datos.
@@ -44,6 +64,8 @@ namespace csharpapigenerica.Controllers
         /// <response code="404">La tabla no existe en la base de datos.</response>
         /// <response code="409">Error de restricción en la base de datos (clave foránea o clave duplicada).</response>
         /// <response code="500">Error interno del servidor.</response>
+        /// 
+        
         [AllowAnonymous] // Permite que cualquier usuario acceda a este endpoint, sin necesidad de autenticación.
         [HttpGet] // Define que este método responde a solicitudes HTTP GET.
         public IActionResult Listar(string nombreProyecto, string nombreTabla) // Método para listar los registros de una tabla específica.
