@@ -829,8 +829,91 @@ public IActionResult EjecutarProcedimientoAlmacenado(
     }
 }
 
+[AllowAnonymous]
+[HttpGet("filtrar")]
+public IActionResult FiltrarPorCampo(string nombreProyecto, string nombreTabla, string campo, string valor)
+{
+    if (string.IsNullOrWhiteSpace(nombreTabla) || string.IsNullOrWhiteSpace(campo) || string.IsNullOrWhiteSpace(valor))
+    {
+        return BadRequest("Parámetros inválidos.");
+    }
+
+    try
+    {
+        controlConexion.AbrirBd();
+
+        var consulta = $"SELECT * FROM {nombreTabla} WHERE {campo} = @valor";
+        var parametro = CrearParametro("@valor", valor);
+
+        var resultado = controlConexion.EjecutarConsultaSql(consulta, new[] { parametro });
+        controlConexion.CerrarBd();
+
+        var lista = new List<Dictionary<string, object?>>();
+        foreach (DataRow fila in resultado.Rows)
+        {
+            var filaDic = resultado.Columns.Cast<DataColumn>()
+                .ToDictionary(col => col.ColumnName, col => fila[col] == DBNull.Value ? null : fila[col]);
+            lista.Add(filaDic);
+        }
+
+        return Ok(lista);
+    }
+    catch (Exception ex)
+    {
+        controlConexion.CerrarBd();
+        return StatusCode(500, $"Error en la consulta: {ex.Message}");
+    }
+}
+
+[AllowAnonymous]
+[HttpPost("filtrar-multiple")]
+public IActionResult FiltrarPorCampoMultiple(string nombreProyecto, string nombreTabla, [FromBody] Dictionary<string, object> filtros)
+{
+    if (filtros == null || !filtros.ContainsKey("campo") || !filtros.ContainsKey("valores"))
+    {
+        return BadRequest("Se deben especificar el campo y la lista de valores.");
+    }
+
+    try
+    {
+        string campo = filtros["campo"].ToString() ?? "";
+        var valores = (filtros["valores"] as JsonElement?)?.EnumerateArray()
+                         .Select(v => v.ToString())
+                         .Where(v => !string.IsNullOrEmpty(v))
+                         .ToList();
+
+        if (valores == null || !valores.Any())
+            return BadRequest("La lista de valores no puede estar vacía.");
+
+        string placeholders = string.Join(", ", valores.Select((v, i) => $"@valor{i}"));
+        string consulta = $"SELECT * FROM {nombreTabla} WHERE {campo} IN ({placeholders})";
+
+        var parametros = valores.Select((v, i) => new SqlParameter($"@valor{i}", v)).ToArray();
+
+        controlConexion.AbrirBd();
+        var resultado = controlConexion.EjecutarConsultaSql(consulta, parametros);
+        controlConexion.CerrarBd();
+
+        var lista = resultado.Rows.Cast<DataRow>()
+            .Select(fila => resultado.Columns.Cast<DataColumn>()
+                .ToDictionary(col => col.ColumnName, col => fila[col] == DBNull.Value ? null : fila[col]))
+            .ToList();
+
+        return Ok(lista);
+    }
+    catch (Exception ex)
+    {
+        controlConexion.CerrarBd();
+        return StatusCode(500, $"Error en la consulta múltiple: {ex.Message}");
+    }
+}
+
+
+
 }
 }
+
+
 
 
 
