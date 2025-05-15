@@ -908,8 +908,61 @@ public IActionResult FiltrarPorCampoMultiple(string nombreProyecto, string nombr
     }
 }
 
+[AllowAnonymous]
+[HttpPost("verificar-usuario")]
+public IActionResult VerificarUsuarioYRoles([FromBody] Dictionary<string, string> datos)
+{
+    if (!datos.ContainsKey("email") || !datos.ContainsKey("contrasena"))
+        return BadRequest("Faltan datos de autenticación.");
 
+    string email = datos["email"];
+    string contrasena = datos["contrasena"];
 
+    try
+    {
+        controlConexion.AbrirBd();
+
+        // 1. Verifica que exista el usuario
+        var queryUsuario = "SELECT contrasena FROM usuario WHERE email = @email";
+        var resultado = controlConexion.EjecutarConsultaSql(queryUsuario, new[] {
+            new SqlParameter("@email", email)
+        });
+
+        if (resultado.Rows.Count == 0)
+            return NotFound("Usuario no encontrado.");
+
+        string hashAlmacenado = resultado.Rows[0]["contrasena"].ToString()!;
+        if (!BCrypt.Net.BCrypt.Verify(contrasena, hashAlmacenado))
+            return Unauthorized("Contraseña incorrecta.");
+
+        // 2. Trae los roles del usuario
+        var queryRoles = @"
+            SELECT r.nombre FROM rol_usuario ru
+            INNER JOIN rol r ON ru.fkidrol = r.id
+            WHERE ru.fkemail = @email";
+
+        var rolesTable = controlConexion.EjecutarConsultaSql(queryRoles, new[] {
+            new SqlParameter("@email", email)
+        });
+
+        var roles = rolesTable.Rows.Cast<DataRow>()
+                      .Select(r => r["nombre"].ToString()!)
+                      .ToList();
+
+        controlConexion.CerrarBd();
+
+        return Ok(new
+        {
+            Email = email,
+            Roles = roles
+        });
+    }
+    catch (Exception ex)
+    {
+        controlConexion.CerrarBd();
+        return StatusCode(500, "Error interno: " + ex.Message);
+    }
+}
 }
 }
 
