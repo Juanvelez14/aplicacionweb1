@@ -23,7 +23,7 @@ namespace csharpapigenerica.Controllers
     {
         private readonly ControlConexion controlConexion; // Servicio para manejar la conexión a la base de datos.
         private readonly IConfiguration _configuration; // Configuración de la aplicación para obtener valores de appsettings.json.
-        
+
         // Constructor que inyecta los servicios necesarios
         public EntidadesController(ControlConexion controlConexion, IConfiguration configuration)
         {
@@ -49,7 +49,7 @@ namespace csharpapigenerica.Controllers
         public IActionResult Listar(string nombreProyecto, string nombreTabla) // Método para listar los registros de una tabla específica.
         {
             // Verifica si el nombre de la tabla es nulo o vacío
-            if (string.IsNullOrWhiteSpace(nombreTabla)) 
+            if (string.IsNullOrWhiteSpace(nombreTabla))
                 return BadRequest("El nombre de la tabla no puede estar vacío.");
 
             try
@@ -65,7 +65,7 @@ namespace csharpapigenerica.Controllers
                 foreach (DataRow fila in tablaResultados.Rows)
                 {
                     var propiedadesFila = fila.Table.Columns.Cast<DataColumn>()
-                        .ToDictionary(columna => columna.ColumnName, 
+                        .ToDictionary(columna => columna.ColumnName,
                                     columna => fila[columna] == DBNull.Value ? null : fila[columna]);
                     listaFilas.Add(propiedadesFila); // Agrega la fila convertida a la lista.
                 }
@@ -327,24 +327,24 @@ namespace csharpapigenerica.Controllers
         {
             // Verifica si el nombre de la tabla es nulo o vacío, o si los datos a insertar están vacíos.
             if (string.IsNullOrWhiteSpace(nombreTabla) || datosEntidad == null || !datosEntidad.Any())
-                return BadRequest("El nombre de la tabla y los datos de la entidad no pueden estar vacíos.");  
-                // Retorna un error HTTP 400 si algún parámetro requerido está vacío.
+                return BadRequest("El nombre de la tabla y los datos de la entidad no pueden estar vacíos.");
+            // Retorna un error HTTP 400 si algún parámetro requerido está vacío.
 
             try
             {
                 // Convierte los datos recibidos en un diccionario con las claves y valores adecuados.
                 var propiedades = datosEntidad.ToDictionary(
-                    kvp => kvp.Key, 
-                    kvp => kvp.Value is JsonElement elementoJson 
+                    kvp => kvp.Key,
+                    kvp => kvp.Value is JsonElement elementoJson
                         ? ConvertirJsonElement(elementoJson) // Convierte valores JSON a tipos de datos de C#
-                        : kvp.Value 
+                        : kvp.Value
                 );
 
                 // Definir una lista de posibles nombres de claves que representan contraseñas.
                 var clavesContrasena = new[] { "password", "contrasena", "passw", "clave" };
 
                 // Verifica si alguno de los campos en los datos coincide con un posible campo de contraseña.
-                var claveContrasena = propiedades.Keys.FirstOrDefault(k => 
+                var claveContrasena = propiedades.Keys.FirstOrDefault(k =>
                     clavesContrasena.Any(pk => k.IndexOf(pk, StringComparison.OrdinalIgnoreCase) >= 0)
                 );
 
@@ -360,7 +360,7 @@ namespace csharpapigenerica.Controllers
                 }
 
                 // Obtiene el proveedor de base de datos desde la configuración.
-                string proveedor = _configuration["DatabaseProvider"] ?? 
+                string proveedor = _configuration["DatabaseProvider"] ??
                     throw new InvalidOperationException("Proveedor de base de datos no configurado.");
 
                 // Construye la lista de columnas y valores a insertar en la tabla.
@@ -371,7 +371,7 @@ namespace csharpapigenerica.Controllers
                 string consultaSQL = $"INSERT INTO {nombreTabla} ({columnas}) VALUES ({valores})";
 
                 // Crea los parámetros para la consulta SQL.
-                var parametros = propiedades.Select(p => 
+                var parametros = propiedades.Select(p =>
                     CrearParametro($"{ObtenerPrefijoParametro(proveedor)}{p.Key}", p.Value)
                 ).ToArray();
 
@@ -393,7 +393,7 @@ namespace csharpapigenerica.Controllers
             catch (Exception ex) // Captura cualquier error inesperado.
             {
                 Console.WriteLine($"Ocurrió una excepción: {ex.Message}"); // Imprime el error en la consola.
-                return StatusCode(500, $"Error interno del servidor: {ex.Message}"); 
+                return StatusCode(500, $"Error interno del servidor: {ex.Message}");
                 // Retorna un error HTTP 500 indicando que ocurrió un problema en el servidor.
             }
         }
@@ -464,7 +464,7 @@ namespace csharpapigenerica.Controllers
                 // Verifica si hay un campo de contraseña en los datos, y si lo hay, lo hashea.
                 var clavesContrasena = new[] { "password", "contrasena", "passw", "clave" }; // Lista de posibles nombres para campos de contraseña.
                 var claveContrasena = propiedades.Keys.FirstOrDefault(k => clavesContrasena.Any(pk => k.IndexOf(pk, StringComparison.OrdinalIgnoreCase) >= 0)); // Busca si alguno de los campos es una contraseña.
-                
+
                 if (claveContrasena != null) // Si se encontró un campo de contraseña.
                 {
                     var contrasenaPlano = propiedades[claveContrasena]?.ToString(); // Obtiene el valor de la contraseña.
@@ -559,12 +559,12 @@ namespace csharpapigenerica.Controllers
         /// <response code="500">Error interno del servidor.</response>
         [AllowAnonymous] // Permite el acceso sin autenticación a este endpoint.
         [HttpPost("verificar-contrasena")] // Define la ruta HTTP POST como "/api/{nombreProyecto}/{nombreTabla}/verificar-contrasena".
-        public IActionResult VerificarContrasena(string nombreProyecto, string nombreTabla, [FromBody] Dictionary<string, string> datos) 
+        public IActionResult VerificarContrasena(string nombreProyecto, string nombreTabla, [FromBody] Dictionary<string, string> datos)
         // Método que verifica si la contraseña ingresada coincide con la almacenada en la base de datos.
         {
             // Verifica que los parámetros esenciales no sean nulos o vacíos.
-            if (string.IsNullOrWhiteSpace(nombreTabla) || datos == null || 
-                !datos.ContainsKey("campoUsuario") || !datos.ContainsKey("campoContrasena") || 
+            if (string.IsNullOrWhiteSpace(nombreTabla) || datos == null ||
+                !datos.ContainsKey("campoUsuario") || !datos.ContainsKey("campoContrasena") ||
                 !datos.ContainsKey("valorUsuario") || !datos.ContainsKey("valorContrasena"))
             {
                 return BadRequest("El nombre de la tabla, el campo de usuario, el campo de contraseña, el valor de usuario y el valor de contraseña no pueden estar vacíos.");
@@ -712,204 +712,302 @@ namespace csharpapigenerica.Controllers
 
 
 
-/// <summary>
-/// Ejecuta un procedimiento almacenado con los parámetros proporcionados.
-/// </summary>
-/// <param name="nombreProyecto">Nombre del proyecto al que pertenece la tabla.</param>
-/// <param name="nombreTabla">Nombre de la tabla relacionada con el procedimiento.</param>
-/// <param name="parametrosSP">Diccionario con el nombre del SP y sus parámetros.</param>
-/// <returns>Los resultados del procedimiento almacenado o un mensaje de error.</returns>
-/// <response code="200">Devuelve los resultados del procedimiento almacenado.</response>
-/// <response code="400">El nombre del SP no está especificado o los parámetros son inválidos.</response>
-/// <response code="500">Error al ejecutar el procedimiento almacenado.</response>
-[AllowAnonymous]
-[HttpPost("ejecutar-sp")]
-public IActionResult EjecutarProcedimientoAlmacenado(
-    string nombreProyecto, 
-    string nombreTabla, 
-    [FromBody] Dictionary<string, object> parametrosSP)
-{
-    if (parametrosSP == null || !parametrosSP.ContainsKey("nombreSP"))
-    {
-        return BadRequest("Debe proporcionar el nombre del SP y sus parámetros.");
-    }
-
-    try
-    {
-        // 1. Validar y obtener el nombre del SP
-        if (!parametrosSP.TryGetValue("nombreSP", out object? nombreSPObj) || nombreSPObj == null)
+        /// <summary>
+        /// Ejecuta un procedimiento almacenado con los parámetros proporcionados.
+        /// </summary>
+        /// <param name="nombreProyecto">Nombre del proyecto al que pertenece la tabla.</param>
+        /// <param name="nombreTabla">Nombre de la tabla relacionada con el procedimiento.</param>
+        /// <param name="parametrosSP">Diccionario con el nombre del SP y sus parámetros.</param>
+        /// <returns>Los resultados del procedimiento almacenado o un mensaje de error.</returns>
+        /// <response code="200">Devuelve los resultados del procedimiento almacenado.</response>
+        /// <response code="400">El nombre del SP no está especificado o los parámetros son inválidos.</response>
+        /// <response code="500">Error al ejecutar el procedimiento almacenado.</response>
+        [AllowAnonymous]
+        [HttpPost("ejecutar-sp")]
+        public IActionResult EjecutarProcedimientoAlmacenado(
+            string nombreProyecto,
+            string nombreTabla,
+            [FromBody] Dictionary<string, object> parametrosSP)
         {
-            return BadRequest("El parámetro 'nombreSP' es requerido.");
-        }
-        string nombreSP = nombreSPObj.ToString()!;
-
-        // 2. Convertir parámetros (manejar JsonElement para 'productos')
-        var parametros = new Dictionary<string, object>();
-        foreach (var kvp in parametrosSP)
-        {
-            if (kvp.Key == "nombreSP") continue;
-
-            if (kvp.Value is JsonElement jsonElement)
+            if (parametrosSP == null || !parametrosSP.ContainsKey("nombreSP"))
             {
-                // Convertir JsonElement a string y eliminar escapes adicionales
-                string jsonString = jsonElement.GetRawText();
-                
-                // Eliminar comillas iniciales y finales (si existen)
-                if (jsonString.StartsWith("\"") && jsonString.EndsWith("\""))
+                return BadRequest("Debe proporcionar el nombre del SP y sus parámetros.");
+            }
+
+            try
+            {
+                // 1. Validar y obtener el nombre del SP
+                if (!parametrosSP.TryGetValue("nombreSP", out object? nombreSPObj) || nombreSPObj == null)
                 {
-                    jsonString = jsonString.Substring(1, jsonString.Length - 2);
+                    return BadRequest("El parámetro 'nombreSP' es requerido.");
                 }
-                
-                // Reemplazar escapes de comillas dobles
-                jsonString = jsonString.Replace("\\\"", "\""); // Elimina las barras invertidas escapadas
-                
-                parametros[kvp.Key] = jsonString;
-            }
-            else
-            {
-                parametros[kvp.Key] = kvp.Value;
-            }
-        }
+                string nombreSP = nombreSPObj.ToString()!;
 
-        // Buscar campos de contraseña y encriptarlos
-        var clavesContrasena = new[] { "password", "contrasena", "passw", "clave" };
-        
-        foreach (var key in parametros.Keys.ToList())
-        {
-            // Comprobar si el nombre del parámetro parece ser una contraseña
-            if (clavesContrasena.Any(pk => key.IndexOf(pk, StringComparison.OrdinalIgnoreCase) >= 0))
-            {
-                var contrasenaPlano = parametros[key]?.ToString();
-                if (!string.IsNullOrEmpty(contrasenaPlano))
+                // 2. Convertir parámetros (manejar JsonElement para 'productos')
+                var parametros = new Dictionary<string, object>();
+                foreach (var kvp in parametrosSP)
                 {
-                    // Encriptar la contraseña
-                    parametros[key] = BCrypt.Net.BCrypt.HashPassword(contrasenaPlano);
-                    Console.WriteLine($"Contraseña encriptada para el parámetro: {key}");
+                    if (kvp.Key == "nombreSP") continue;
+
+                    if (kvp.Value is JsonElement jsonElement)
+                    {
+                        // Convertir JsonElement a string y eliminar escapes adicionales
+                        string jsonString = jsonElement.GetRawText();
+
+                        // Eliminar comillas iniciales y finales (si existen)
+                        if (jsonString.StartsWith("\"") && jsonString.EndsWith("\""))
+                        {
+                            jsonString = jsonString.Substring(1, jsonString.Length - 2);
+                        }
+
+                        // Reemplazar escapes de comillas dobles
+                        jsonString = jsonString.Replace("\\\"", "\""); // Elimina las barras invertidas escapadas
+
+                        parametros[kvp.Key] = jsonString;
+                    }
+                    else
+                    {
+                        parametros[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Buscar campos de contraseña y encriptarlos
+                var clavesContrasena = new[] { "password", "contrasena", "passw", "clave" };
+
+                foreach (var key in parametros.Keys.ToList())
+                {
+                    // Comprobar si el nombre del parámetro parece ser una contraseña
+                    if (clavesContrasena.Any(pk => key.IndexOf(pk, StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        var contrasenaPlano = parametros[key]?.ToString();
+                        if (!string.IsNullOrEmpty(contrasenaPlano))
+                        {
+                            // Encriptar la contraseña
+                            parametros[key] = BCrypt.Net.BCrypt.HashPassword(contrasenaPlano);
+                            Console.WriteLine($"Contraseña encriptada para el parámetro: {key}");
+                        }
+                    }
+                }
+
+                // 3. Ejecutar el SP
+                controlConexion.AbrirBd();
+                using (var comando = new SqlCommand(nombreSP, controlConexion.ObtenerConexion() as SqlConnection))
+                {
+                    comando.CommandType = CommandType.StoredProcedure;
+
+                    // Agregar parámetros al comando
+                    foreach (var param in parametros)
+                    {
+                        comando.Parameters.AddWithValue(
+                            $"@{param.Key}",
+                            param.Value ?? DBNull.Value
+                        );
+                    }
+
+                    // Ejecutar y obtener resultados
+                    var resultado = new DataTable();
+                    using (var adaptador = new SqlDataAdapter(comando))
+                    {
+                        adaptador.Fill(resultado);
+                    }
+
+                    controlConexion.CerrarBd();
+
+                    // Convertir resultados a JSON
+                    var lista = resultado.Rows.Cast<DataRow>()
+                        .Select(fila => resultado.Columns.Cast<DataColumn>()
+                            .ToDictionary(col => col.ColumnName, col => fila[col] == DBNull.Value ? null : fila[col]))
+                        .ToList();
+
+                    return Ok(lista);
                 }
             }
+            catch (Exception ex)
+            {
+                controlConexion.CerrarBd();
+                return StatusCode(500, $"Error al ejecutar el SP: {ex.Message}");
+            }
         }
 
-        // 3. Ejecutar el SP
-        controlConexion.AbrirBd();
-        using (var comando = new SqlCommand(nombreSP, controlConexion.ObtenerConexion() as SqlConnection))
+        [AllowAnonymous]
+        [HttpGet("filtrar")]
+        public IActionResult FiltrarPorCampo(string nombreProyecto, string nombreTabla, string campo, string valor)
         {
-            comando.CommandType = CommandType.StoredProcedure;
-
-            // Agregar parámetros al comando
-            foreach (var param in parametros)
+            if (string.IsNullOrWhiteSpace(nombreTabla) || string.IsNullOrWhiteSpace(campo) || string.IsNullOrWhiteSpace(valor))
             {
-                comando.Parameters.AddWithValue(
-                    $"@{param.Key}", 
-                    param.Value ?? DBNull.Value
-                );
+                return BadRequest("Parámetros inválidos.");
             }
 
-            // Ejecutar y obtener resultados
-            var resultado = new DataTable();
-            using (var adaptador = new SqlDataAdapter(comando))
+            try
             {
-                adaptador.Fill(resultado);
+                controlConexion.AbrirBd();
+
+                var consulta = $"SELECT * FROM {nombreTabla} WHERE {campo} = @valor";
+                var parametro = CrearParametro("@valor", valor);
+
+                var resultado = controlConexion.EjecutarConsultaSql(consulta, new[] { parametro });
+                controlConexion.CerrarBd();
+
+                var lista = new List<Dictionary<string, object?>>();
+                foreach (DataRow fila in resultado.Rows)
+                {
+                    var filaDic = resultado.Columns.Cast<DataColumn>()
+                        .ToDictionary(col => col.ColumnName, col => fila[col] == DBNull.Value ? null : fila[col]);
+                    lista.Add(filaDic);
+                }
+
+                return Ok(lista);
+            }
+            catch (Exception ex)
+            {
+                controlConexion.CerrarBd();
+                return StatusCode(500, $"Error en la consulta: {ex.Message}");
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("filtrar-multiple")]
+        public IActionResult FiltrarPorCampoMultiple(string nombreProyecto, string nombreTabla, [FromBody] Dictionary<string, object> filtros)
+        {
+            if (filtros == null || !filtros.ContainsKey("campo") || !filtros.ContainsKey("valores"))
+            {
+                return BadRequest("Se deben especificar el campo y la lista de valores.");
             }
 
-            controlConexion.CerrarBd();
+            try
+            {
+                string campo = filtros["campo"].ToString() ?? "";
+                var valores = (filtros["valores"] as JsonElement?)?.EnumerateArray()
+                                 .Select(v => v.ToString())
+                                 .Where(v => !string.IsNullOrEmpty(v))
+                                 .ToList();
 
-            // Convertir resultados a JSON
-            var lista = resultado.Rows.Cast<DataRow>()
-                .Select(fila => resultado.Columns.Cast<DataColumn>()
-                    .ToDictionary(col => col.ColumnName, col => fila[col] == DBNull.Value ? null : fila[col]))
-                .ToList();
+                if (valores == null || !valores.Any())
+                    return BadRequest("La lista de valores no puede estar vacía.");
 
-            return Ok(lista);
-        }
-    }
-    catch (Exception ex)
-    {
-        controlConexion.CerrarBd();
-        return StatusCode(500, $"Error al ejecutar el SP: {ex.Message}");
-    }
-}
+                string placeholders = string.Join(", ", valores.Select((v, i) => $"@valor{i}"));
+                string consulta = $"SELECT * FROM {nombreTabla} WHERE {campo} IN ({placeholders})";
 
-[AllowAnonymous]
-[HttpGet("filtrar")]
-public IActionResult FiltrarPorCampo(string nombreProyecto, string nombreTabla, string campo, string valor)
-{
-    if (string.IsNullOrWhiteSpace(nombreTabla) || string.IsNullOrWhiteSpace(campo) || string.IsNullOrWhiteSpace(valor))
-    {
-        return BadRequest("Parámetros inválidos.");
-    }
+                var parametros = valores.Select((v, i) => new SqlParameter($"@valor{i}", v)).ToArray();
 
-    try
-    {
-        controlConexion.AbrirBd();
+                controlConexion.AbrirBd();
+                var resultado = controlConexion.EjecutarConsultaSql(consulta, parametros);
+                controlConexion.CerrarBd();
 
-        var consulta = $"SELECT * FROM {nombreTabla} WHERE {campo} = @valor";
-        var parametro = CrearParametro("@valor", valor);
+                var lista = resultado.Rows.Cast<DataRow>()
+                    .Select(fila => resultado.Columns.Cast<DataColumn>()
+                        .ToDictionary(col => col.ColumnName, col => fila[col] == DBNull.Value ? null : fila[col]))
+                    .ToList();
 
-        var resultado = controlConexion.EjecutarConsultaSql(consulta, new[] { parametro });
-        controlConexion.CerrarBd();
-
-        var lista = new List<Dictionary<string, object?>>();
-        foreach (DataRow fila in resultado.Rows)
-        {
-            var filaDic = resultado.Columns.Cast<DataColumn>()
-                .ToDictionary(col => col.ColumnName, col => fila[col] == DBNull.Value ? null : fila[col]);
-            lista.Add(filaDic);
+                return Ok(lista);
+            }
+            catch (Exception ex)
+            {
+                controlConexion.CerrarBd();
+                return StatusCode(500, $"Error en la consulta múltiple: {ex.Message}");
+            }
         }
 
-        return Ok(lista);
-    }
-    catch (Exception ex)
-    {
-        controlConexion.CerrarBd();
-        return StatusCode(500, $"Error en la consulta: {ex.Message}");
-    }
-}
-
-[AllowAnonymous]
-[HttpPost("filtrar-multiple")]
-public IActionResult FiltrarPorCampoMultiple(string nombreProyecto, string nombreTabla, [FromBody] Dictionary<string, object> filtros)
-{
-    if (filtros == null || !filtros.ContainsKey("campo") || !filtros.ContainsKey("valores"))
-    {
-        return BadRequest("Se deben especificar el campo y la lista de valores.");
-    }
-
-    try
-    {
-        string campo = filtros["campo"].ToString() ?? "";
-        var valores = (filtros["valores"] as JsonElement?)?.EnumerateArray()
-                         .Select(v => v.ToString())
-                         .Where(v => !string.IsNullOrEmpty(v))
-                         .ToList();
-
-        if (valores == null || !valores.Any())
-            return BadRequest("La lista de valores no puede estar vacía.");
-
-        string placeholders = string.Join(", ", valores.Select((v, i) => $"@valor{i}"));
-        string consulta = $"SELECT * FROM {nombreTabla} WHERE {campo} IN ({placeholders})";
-
-        var parametros = valores.Select((v, i) => new SqlParameter($"@valor{i}", v)).ToArray();
-
-        controlConexion.AbrirBd();
-        var resultado = controlConexion.EjecutarConsultaSql(consulta, parametros);
-        controlConexion.CerrarBd();
-
-        var lista = resultado.Rows.Cast<DataRow>()
-            .Select(fila => resultado.Columns.Cast<DataColumn>()
-                .ToDictionary(col => col.ColumnName, col => fila[col] == DBNull.Value ? null : fila[col]))
-            .ToList();
-
-        return Ok(lista);
-    }
-    catch (Exception ex)
-    {
-        controlConexion.CerrarBd();
-        return StatusCode(500, $"Error en la consulta múltiple: {ex.Message}");
-    }
-}
-
-[AllowAnonymous]
+        [AllowAnonymous]
 [HttpPost("verificar-usuario")]
+public IActionResult VerificarUsuario([FromBody] Dictionary<string, string> datos)
+{
+    if (!datos.ContainsKey("email") || !datos.ContainsKey("contrasena"))
+        return BadRequest("Faltan datos de autenticación.");
+
+    string email = datos["email"];
+    string contrasena = datos["contrasena"];
+
+    try
+    {
+        controlConexion.AbrirBd();
+
+        // 1. Verifica que exista el usuario
+        var queryUsuario = "SELECT contrasena FROM usuario WHERE email = @email";
+        var resultado = controlConexion.EjecutarConsultaSql(queryUsuario, new[] {
+            new SqlParameter("@email", email)
+        });
+
+        if (resultado.Rows.Count == 0)
+            return NotFound("Usuario no encontrado.");
+
+        string hashAlmacenado = resultado.Rows[0]["contrasena"].ToString()!;
+        if (!BCrypt.Net.BCrypt.Verify(contrasena, hashAlmacenado))
+            return Unauthorized("Contraseña incorrecta.");
+
+        // 2. Trae los roles del usuario
+        var queryRoles = @"
+            SELECT r.nombre FROM rol_usuario ru
+            INNER JOIN rol r ON ru.fkidrol = r.id
+            WHERE ru.fkemail = @email";
+
+        var rolesTable = controlConexion.EjecutarConsultaSql(queryRoles, new[] {
+            new SqlParameter("@email", email)
+        });
+
+        var roles = rolesTable.Rows.Cast<DataRow>()
+                      .Select(r => r["nombre"].ToString()!)
+                      .ToList();
+
+        controlConexion.CerrarBd();
+
+        return Ok(new
+        {
+            Email = email,
+            Roles = roles
+        });
+    }
+    catch (Exception ex)
+    {
+        controlConexion.CerrarBd();
+        return StatusCode(500, "Error interno: " + ex.Message);
+    }
+}
+        /// <summary>
+        /// Obtiene los roles de un usuario específico.
+        /// </summary>
+        /// <param name="nombreProyecto">Nombre del proyecto al que pertenece la tabla.</param>
+        /// <param name="nombreTabla">Nombre de la tabla en la base de datos.</param>
+        /// <param name="email">El correo del usuario para obtener sus roles.</param>
+        /// <returns>Lista de roles asociados al usuario en formato JSON.</returns>
+        /// <response code="200">Devuelve la lista de roles asociados al usuario.</response>
+        /// <response code="400">El correo proporcionado es inválido o está vacío.</response>
+        /// <response code="404">No se encontró el usuario.</response>
+        [HttpGet("roles/{email}")]
+        public IActionResult ObtenerRolesUsuario(string nombreProyecto, string nombreTabla, string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest("El correo no puede estar vacío.");
+
+            try
+            {
+                // Consulta SQL para obtener los roles asociados al usuario
+                string query = @"
+            SELECT r.nombre 
+            FROM rol_usuario ru
+            INNER JOIN rol r ON ru.fkidrol = r.id
+            WHERE ru.fkemail = @Email";
+
+                var resultado = controlConexion.EjecutarConsultaSql(query, new[] {
+            CrearParametro("@Email", email)
+        });
+
+                if (resultado.Rows.Count == 0)
+                    return NotFound("Usuario no encontrado o no tiene roles.");
+
+                var roles = resultado.Rows.Cast<DataRow>()
+                    .Select(row => row["nombre"].ToString())
+                    .ToList();
+
+                return Ok(new { Email = email, Roles = roles });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error interno: {ex.Message}");
+            }
+        }
+
+[HttpPost("verificar-usuario-y-roles")]
 public IActionResult VerificarUsuarioYRoles([FromBody] Dictionary<string, string> datos)
 {
     if (!datos.ContainsKey("email") || !datos.ContainsKey("contrasena"))
@@ -963,7 +1061,9 @@ public IActionResult VerificarUsuarioYRoles([FromBody] Dictionary<string, string
         return StatusCode(500, "Error interno: " + ex.Message);
     }
 }
-}
+
+
+    }
 }
 
 
